@@ -1,3 +1,74 @@
-<ng-container *ngIf="automaton">
+<ng-container *ngIf="automaton$ | async as automaton">
   <h1>{{automaton.name}}</h1>
+  <form *ngIf="transitionForm" [formGroup]="transitionForm" (ngSubmit)="addTransition(automaton)">
+      <div class="input-field-wrapper">
+        <mat-form-field>
+          <input matInput placeholder="State" formControlName="state" required>
+          <mat-error *ngIf="stateControl.hasError('required') && stateControl.touched">
+            The state cannot be empty.
+          </mat-error>
+        </mat-form-field>
+        <mat-form-field>
+          <input matInput placeholder="Input" formControlName="input" required>
+          <mat-error *ngIf="inputControl.hasError('required') && inputControl.touched">
+            The input cannot be empty.
+          </mat-error>
+          <mat-error *ngIf="inputControl.hasError('maxlength') && inputControl.touched">
+            The input can only be one character.
+          </mat-error>
+        </mat-form-field>
+        <mat-form-field>
+          <input matInput placeholder="Next State" formControlName="next_state" required>
+          <mat-error *ngIf="nextStateControl.hasError('required') && nextStateControl.touched">
+            The next state cannot be empty.
+          </mat-error>
+        </mat-form-field>
+      </div>
+      <button mat-button type="submit" [disabled]="transitionForm.invalid">Add Transition</button>
+  </form>
+  <ngx-graph
+    class="chart-container"
+    [draggingEnabled]="false"
+    [view]="[500, 550]"
+    [links]="links$ | async"
+    [nodes]="nodes$ | async"
+    layout="dagreCluster">
+    <ng-template #defsTemplate>
+      <svg:marker id="arrow" viewBox="0 -5 10 10" refX="8" refY="0" markerWidth="4" markerHeight="4" orient="auto">
+        <svg:path d="M0,-5L10,0L0,5" class="arrow-head"/>
+      </svg:marker>
+    </ng-template>
+
+    <ng-template #nodeTemplate let-node>
+      <svg:g class="node" ngx-tooltip [tooltipPlacement]="'top'" [tooltipType]="'tooltip'" [tooltipTitle]="node.label"
+             (click)="onNodeClicked(node.id)">
+        <svg:rect
+          [attr.width]="node.dimension.width"
+          [attr.height]="node.dimension.height"
+          [attr.fill]="isNodeCurrentlySelected(node) ? 'rgba(243,19,19,0.27)' : 'rgba(0,0,0,0.27)'"
+        />
+        <svg:text alignment-baseline="central" [attr.x]="10" [attr.y]="node.dimension.height / 2">
+          {{node.label}}
+        </svg:text>
+      </svg:g>
+    </ng-template>
+
+    <ng-template #linkTemplate let-link>
+      <svg:g class="edge" (click)="onLinkClicked(link.id)">
+        <svg:path class="line" stroke-width="2" marker-end="url(#arrow)" [attr.stroke]="isLinkCurrentlySelected(link) ? 'rgb(255,0,0)' : 'rgb(0,0,0)'"></svg:path>
+        <svg:text class="edge-label" text-anchor="middle">
+          <textPath
+            class="text-path"
+            [attr.href]="'#' + link.id"
+            [attr.fill]="isLinkCurrentlySelected(link) ? 'rgb(255,0,0)' : 'rgb(0,0,0)'"
+            [style.dominant-baseline]="link.dominantBaseline"
+            startOffset="50%"
+          >
+            {{link.label}}
+          </textPath>
+        </svg:text>
+      </svg:g>
+    </ng-template>
+  </ngx-graph>
+  <button mat-raised-button color="warn" (click)="removeSelection(automaton, currentSelection)" *ngIf="currentSelection">Remove selection</button>
 </ng-container>

@@ -5,10 +5,8 @@ import {AutomataRoutingModule} from './automata-routing.module';
 import {AutomataComponent} from './automata.component';
 import {AutomatonDialogComponent} from './automaton-dialog/automaton-dialog.component';
 import {SharedModule} from '../shared/shared.module';
-import {MatFormFieldModule} from '@angular/material/form-field';
-import {ReactiveFormsModule} from '@angular/forms';
-import { AutomatonDetailComponent } from './automaton-detail/automaton-detail.component';
-
+import {AutomatonDetailComponent} from './automaton-detail/automaton-detail.component';
+import {NgxGraphModule} from '@swimlane/ngx-graph';
 
 @NgModule({
   declarations: [
@@ -19,7 +17,8 @@ import { AutomatonDetailComponent } from './automaton-detail/automaton-detail.co
   imports: [
     CommonModule,
     AutomataRoutingModule,
-    SharedModule
+    SharedModule,
+    NgxGraphModule
   ]
 })
 export class AutomataModule {

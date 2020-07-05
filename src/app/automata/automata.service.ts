@@ -3,8 +3,15 @@ import {BehaviorSubject, Observable} from 'rxjs';
 import {map, skip} from 'rxjs/operators';
 import {UntilDestroy, untilDestroyed} from '@ngneat/until-destroy';
 
+export interface Transition {
+  state: string;
+  input: string;
+  next_state: string;
+}
+
 export interface Automaton {
   name: string;
+  transitions?: Transition[];
 }
 
 @UntilDestroy()
@@ -52,6 +59,43 @@ export class AutomataService {
   deleteAutomata(deletedAutomata: Automaton): void {
     this.automataBehaviourSubject.next(
       this.automataBehaviourSubject.value.filter(automata => automata.name !== deletedAutomata.name)
+    );
+  }
+
+  addTransitionToAutomaton(mutatedAutomaton: Automaton, transition: Transition): void {
+    this.automataBehaviourSubject.next(
+      this.automataBehaviourSubject.value.map(automaton => {
+        if (automaton.name !== mutatedAutomaton.name) {
+          return automaton;
+        }
+        automaton.transitions = [...automaton.transitions ?? [], transition];
+        return automaton;
+      })
+    );
+  }
+
+  removeTransitionFromAutomaton(mutatedAutomaton: Automaton, transitionIndex: number): void {
+    this.automataBehaviourSubject.next(
+      this.automataBehaviourSubject.value.map(automaton => {
+        if (automaton.name !== mutatedAutomaton.name) {
+          return automaton;
+        }
+        automaton.transitions = automaton.transitions.filter((value, index) => index !== transitionIndex);
+        return automaton;
+      })
+    );
+  }
+
+  removeStateFromAutomaton(mutatedAutomaton: Automaton, removedState: string): void {
+    this.automataBehaviourSubject.next(
+      this.automataBehaviourSubject.value.map(automaton => {
+        if (automaton.name !== mutatedAutomaton.name) {
+          return automaton;
+        }
+        automaton.transitions = automaton.transitions?.filter(transition =>
+          transition.state !== removedState && transition.next_state !== removedState) ?? [];
+        return automaton;
+      })
     );
   }
 }
