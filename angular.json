@@ -28,6 +28,7 @@
               "src/assets"
             ],
             "styles": [
+              "./node_modules/@angular/material/prebuilt-themes/deeppurple-amber.css",
               "src/styles.scss"
             ],
             "scripts": []
@@ -92,6 +93,7 @@
               "src/assets"
             ],
             "styles": [
+              "./node_modules/@angular/material/prebuilt-themes/deeppurple-amber.css",
               "src/styles.scss"
             ],
             "scripts": []
@@ -123,6 +125,10 @@
           }
         }
       }
-    }},
-  "defaultProject": "lammes-automata-theory-angular-gui"
+    }
+  },
+  "defaultProject": "lammes-automata-theory-angular-gui",
+  "cli": {
+    "analytics": "e0d8e23a-36c9-4b70-bfb3-4e5661c68e92"
+  }
 }

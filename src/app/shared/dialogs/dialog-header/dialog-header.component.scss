@@ -1,0 +1,14 @@
+button.close {
+  float: right;
+}
+
+h1 {
+  // This makes the h1 tag not take up the whole width so that the close button can be on the same height.
+  display: inline-block;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  flex-direction: row;
+}

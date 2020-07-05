@@ -1,0 +1,9 @@
+<h1>Automata</h1>
+<span class="automata" *ngFor="let automata of automata$ | async">
+  <button mat-raised-button [mat-menu-trigger-for]="menu">{{automata.name}}</button>
+  <mat-menu #menu="matMenu">
+    <button mat-menu-item [routerLink]="[automata.name]">Open</button>
+    <button mat-menu-item (click)="deleteAutomata(automata)">Delete</button>
+  </mat-menu>
+</span>
+<button mat-button (click)="createAutomaton()">Create Automaton</button>
