@@ -1,0 +1,51 @@
+.row {
+  display: flex;
+  flex-direction: row;
+}
+
+.column {
+  margin: 10pt;
+  padding: 10pt;
+  border: 2pt solid black;
+}
+
+mat-form-field {
+  display: block;
+}
+
+// We have to use ng-deep because the chart is not defined by any of our Angular components but rather the chart library.
+::ng-deep div.ngx-charts-outer {
+  border: 2pt solid black;
+}
+
+.grid-container {
+  display: grid;
+  grid-template-columns: auto auto auto auto;
+  padding: 10px;
+  vertical-align: center;
+}
+
+.grid-item {
+  text-align: center;
+  // In order to center vertically.
+  margin: auto;
+}
+
+.drag-and-drop-list {
+  cursor: move;
+
+  // Copied from the Angular Material documentation about drag and drop.
+  &.cdk-drop-list-dragging .drag-and-drop-item:not(.cdk-drag-placeholder) {
+    transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
+  }
+
+  .cdk-drag-animating {
+    transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
+  }
+
+  .cdk-drag-placeholder {
+    opacity: 0;
+  }
+}
+
+

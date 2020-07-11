@@ -1,61 +1,94 @@
 <ng-container *ngIf="automaton$ | async as automaton">
   <h1>{{automaton.name}}</h1>
-  <form *ngIf="transitionForm" [formGroup]="transitionForm" (ngSubmit)="addTransition(automaton)">
-      <div class="input-field-wrapper">
-        <mat-form-field>
-          <input matInput placeholder="State" formControlName="state" required>
-          <mat-error *ngIf="stateControl.hasError('required') && stateControl.touched">
-            The state cannot be empty.
-          </mat-error>
-        </mat-form-field>
-        <mat-form-field>
-          <input matInput placeholder="Input" formControlName="input" required>
-          <mat-error *ngIf="inputControl.hasError('required') && inputControl.touched">
-            The input cannot be empty.
-          </mat-error>
-          <mat-error *ngIf="inputControl.hasError('maxlength') && inputControl.touched">
-            The input can only be one character.
-          </mat-error>
-        </mat-form-field>
-        <mat-form-field>
-          <input matInput placeholder="Next State" formControlName="next_state" required>
-          <mat-error *ngIf="nextStateControl.hasError('required') && nextStateControl.touched">
-            The next state cannot be empty.
-          </mat-error>
-        </mat-form-field>
-      </div>
-      <button mat-button type="submit" [disabled]="transitionForm.invalid">Add Transition</button>
-  </form>
+  <div class="row">
+    <div class="column">
+      <h2>Transitions</h2>
+      <form *ngIf="transitionForm" [formGroup]="transitionForm" (ngSubmit)="addTransition(automaton)">
+        <div class="input-field-wrapper">
+          <mat-form-field>
+            <input matInput placeholder="State" formControlName="state">
+            <mat-error *ngIf="stateControl.touched && stateControl.hasError('required') && stateControl.touched">
+              The state cannot be empty.
+            </mat-error>
+          </mat-form-field>
+          <mat-form-field>
+            <input matInput placeholder="Input" formControlName="input">
+            <mat-error *ngIf="inputControl.touched && inputControl.hasError('required') && inputControl.touched">
+              The input cannot be empty.
+            </mat-error>
+            <mat-error *ngIf="inputControl.touched && inputControl.hasError('maxlength') && inputControl.touched">
+              The input can only be one character.
+            </mat-error>
+          </mat-form-field>
+          <mat-form-field>
+            <input matInput placeholder="Next State" formControlName="next_state">
+            <mat-error
+              *ngIf="nextStateControl.touched && nextStateControl.hasError('required') && nextStateControl.touched">
+              The next state cannot be empty.
+            </mat-error>
+          </mat-form-field>
+        </div>
+        <button mat-button type="submit" [disabled]="transitionForm.invalid">Add Transition</button>
+      </form>
+    </div>
+    <div class="column" cdkDropListGroup>
+      <mat-list>
+        <div mat-subheader>Test Cases</div>
+        <div cdkDropList class="drag-and-drop-list" (cdkDropListDropped)="dropTestCase(automaton, $event)">
+          <mat-list-item class="drag-and-drop-item" *ngFor="let result of testCaseResults$ | async" cdkDrag>
+            <mat-icon mat-list-icon>{{result.wasTestSuccessful ? 'done' : 'close'}}</mat-icon>
+            <div mat-line>{{result.testCase.test_input}}</div>
+            <div mat-line>Expectation: {{result.testCase.expectation ? 'Accept' : 'Reject'}}</div>
+          </mat-list-item>
+        </div>
+      </mat-list>
+      <form *ngIf="testCaseForm" [formGroup]="testCaseForm" (ngSubmit)="addTestCase(automaton)">
+        <div class="input-field-wrapper">
+          <mat-form-field>
+            <input matInput placeholder="Test Input" formControlName="test_input">
+          </mat-form-field>
+          <mat-checkbox placeholder="Expectation" formControlName="expectation">
+            Expect input to be accepted
+          </mat-checkbox>
+        </div>
+        <button mat-button type="submit" [disabled]="testCaseForm.invalid">Add Test Case</button>
+      </form>
+    </div>
+  </div>
   <ngx-graph
     class="chart-container"
     [draggingEnabled]="false"
-    [view]="[500, 550]"
+    [enableZoom]="false"
+    [view]="[700, 500]"
     [links]="links$ | async"
     [nodes]="nodes$ | async"
     layout="dagreCluster">
     <ng-template #defsTemplate>
-      <svg:marker id="arrow" viewBox="0 -5 10 10" refX="8" refY="0" markerWidth="4" markerHeight="4" orient="auto">
-        <svg:path d="M0,-5L10,0L0,5" class="arrow-head"/>
-      </svg:marker>
+      <svg>
+        <marker id="arrow" viewBox="0 -5 10 10" refX="8" refY="0" markerWidth="4" markerHeight="4" orient="auto">
+          <path d="M0,-5L10,0L0,5" class="arrow-head"/>
+        </marker>
+      </svg>
     </ng-template>
 
     <ng-template #nodeTemplate let-node>
-      <svg:g class="node" ngx-tooltip [tooltipPlacement]="'top'" [tooltipType]="'tooltip'" [tooltipTitle]="node.label"
-             (click)="onNodeClicked(node.id)">
-        <svg:rect
-          [attr.width]="node.dimension.width"
-          [attr.height]="node.dimension.height"
-          [attr.fill]="isNodeCurrentlySelected(node) ? 'rgba(243,19,19,0.27)' : 'rgba(0,0,0,0.27)'"
-        />
-        <svg:text alignment-baseline="central" [attr.x]="10" [attr.y]="node.dimension.height / 2">
-          {{node.label}}
-        </svg:text>
-      </svg:g>
+      <svg>
+        <g class="node" ngx-tooltip [tooltipPlacement]="'top'" [tooltipType]="'tooltip'" [tooltipTitle]="node.label"
+           (click)="onNodeClicked(node.id)">
+          <rect [attr.width]="node.dimension.width"
+                [attr.height]="node.dimension.height"
+                [attr.fill]="isNodeCurrentlySelected(node) ? 'rgba(243,19,19,0.27)' : 'rgba(0,0,0,0.27)'"/>
+          <text alignment-baseline="central" [attr.x]="10" [attr.y]="node.dimension.height / 2">
+            {{node.label}}
+          </text>
+        </g>
+      </svg>
     </ng-template>
 
     <ng-template #linkTemplate let-link>
       <svg:g class="edge" (click)="onLinkClicked(link.id)">
-        <svg:path class="line" stroke-width="2" marker-end="url(#arrow)" [attr.stroke]="isLinkCurrentlySelected(link) ? 'rgb(255,0,0)' : 'rgb(0,0,0)'"></svg:path>
+        <svg:path class="line" stroke-width="2" marker-end="url(#arrow)"
+                  [attr.stroke]="isLinkCurrentlySelected(link) ? 'rgb(255,0,0)' : 'rgb(0,0,0)'"></svg:path>
         <svg:text class="edge-label" text-anchor="middle">
           <textPath
             class="text-path"
@@ -70,5 +103,17 @@
       </svg:g>
     </ng-template>
   </ngx-graph>
-  <button mat-raised-button color="warn" (click)="removeSelection(automaton, currentSelection)" *ngIf="currentSelection">Remove selection</button>
+  <button mat-raised-button color="accent" (click)="addAcceptState(automaton, currentSelection.selectedId)"
+          *ngIf="isCurrentSelectionADenyingState(automaton)">Set as accept state
+  </button>
+  <button mat-raised-button color="accent" (click)="removeAcceptState(automaton, currentSelection.selectedId)"
+          *ngIf="isCurrentSelectionAnAcceptingState(automaton)">Set as rejecting state
+  </button>
+  <button mat-raised-button color="primary" (click)="setStartState(automaton, currentSelection.selectedId)"
+          *ngIf="currentSelection?.selectedType == 'node' && currentSelection.selectedId !== automaton.start_state">Set
+    as start state
+  </button>
+  <button mat-raised-button color="warn" (click)="removeSelection(automaton, currentSelection)"
+          *ngIf="currentSelection">Remove selection
+  </button>
 </ng-container>

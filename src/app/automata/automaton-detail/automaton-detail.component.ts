@@ -1,10 +1,11 @@
 import {Component, OnInit} from '@angular/core';
 import {ActivatedRoute} from '@angular/router';
-import {AutomataService, Automaton, Transition} from '../automata.service';
+import {AutomataService, Automaton, TestCase, TestCaseResult, Transition} from '../automata.service';
 import {UntilDestroy} from '@ngneat/until-destroy';
 import {map, switchMap} from 'rxjs/operators';
 import {AbstractControl, FormBuilder, FormGroup, Validators} from '@angular/forms';
 import {Observable} from 'rxjs';
+import {CdkDragDrop} from '@angular/cdk/drag-drop';
 
 interface GraphSelection {
   selectedType: 'node' | 'link';
@@ -21,7 +22,9 @@ export class AutomatonDetailComponent implements OnInit {
   automaton$: Observable<Automaton>;
   nodes$: Observable<any[]>;
   links$: Observable<any[]>;
+  testCaseResults$: Observable<TestCaseResult[]>;
   transitionForm: FormGroup;
+  testCaseForm: FormGroup;
   currentSelection: GraphSelection;
 
   constructor(
@@ -49,10 +52,15 @@ export class AutomatonDetailComponent implements OnInit {
     );
     this.nodes$ = this.automaton$.pipe(map(automaton => this.getNodesForAutomaton(automaton)));
     this.links$ = this.automaton$.pipe(map(automaton => this.getLinksForAutomaton(automaton)));
+    this.testCaseResults$ = this.automaton$.pipe(switchMap(automaton => this.automataService.performTestsForAutomaton(automaton)));
     this.transitionForm = this.formBuilder.group({
       state: ['', Validators.required],
       input: this.formBuilder.control('', [Validators.required, Validators.maxLength(1)]),
       next_state: ['', Validators.required]
+    });
+    this.testCaseForm = this.formBuilder.group({
+      test_input: this.formBuilder.control(''),
+      expectation: this.formBuilder.control(false)
     });
   }
 
@@ -105,12 +113,13 @@ export class AutomatonDetailComponent implements OnInit {
   }
 
   async addTransition(automaton: Automaton): Promise<void> {
-    const transition: Transition = {
-      state: this.stateControl.value,
-      input: this.inputControl.value,
-      next_state: this.nextStateControl.value
-    };
+    const transition: Transition = this.transitionForm.value;
     this.automataService.addTransitionToAutomaton(automaton, transition);
+    this.transitionForm.reset({
+      state: '',
+      input: '',
+      next_state: ''
+    });
   }
 
   removeSelection(automaton: Automaton, removedSelection: GraphSelection): void {
@@ -122,5 +131,53 @@ export class AutomatonDetailComponent implements OnInit {
       this.automataService.removeTransitionFromAutomaton(automaton, transitionIndex);
     }
     delete this.currentSelection;
+  }
+
+  addTestCase(automaton: Automaton): void {
+    const testCase: TestCase = this.testCaseForm.value;
+    this.automataService.addTestCaseToAutomaton(automaton, testCase);
+    this.testCaseForm.reset({
+      test_input: '',
+      expectation: false
+    });
+  }
+
+  setStartState(automaton: Automaton, newStartState: string): void {
+    this.automataService.setStartState(automaton, newStartState);
+  }
+
+  isCurrentSelectionADenyingState(automaton: Automaton): boolean {
+    return this.currentSelection?.selectedType === 'node'
+      && !automaton.accept_states?.includes(this.currentSelection.selectedId);
+  }
+
+  addAcceptState(automaton: Automaton, newAcceptState: string): void {
+    this.automataService.addAcceptState(automaton, newAcceptState);
+  }
+
+  isCurrentSelectionAnAcceptingState(automaton: Automaton): boolean {
+    return this.currentSelection?.selectedType === 'node'
+      && automaton.accept_states?.includes(this.currentSelection.selectedId);
+  }
+
+  /**
+   * Converts an accepting state to a rejecting state just by removing the state from the list of accepting states.
+   * @param previouslyAcceptingState The state that is currently accepting but should and will be rejecting.
+   */
+  removeAcceptState(automaton: Automaton, previouslyAcceptingState: string): void {
+    this.automataService.removeAcceptState(automaton, previouslyAcceptingState);
+  }
+
+  /**
+   * Called when a test case is moved per drag and drop. The test case can either change position with
+   * another test case or be deleted when the user drags it out of the test case section.
+   */
+  dropTestCase(automaton: Automaton, event: CdkDragDrop<TestCaseResult[]>): void {
+    const isDroppedOutsideOfContainer = !event.isPointerOverContainer;
+    if (isDroppedOutsideOfContainer) {
+      this.automataService.removeTestCaseFromAutomaton(automaton, event.previousIndex);
+      return;
+    }
+    this.automataService.changeTestCaseOrder(automaton, event.previousIndex, event.currentIndex);
   }
 }

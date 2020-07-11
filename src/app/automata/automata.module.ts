@@ -7,6 +7,9 @@ import {AutomatonDialogComponent} from './automaton-dialog/automaton-dialog.comp
 import {SharedModule} from '../shared/shared.module';
 import {AutomatonDetailComponent} from './automaton-detail/automaton-detail.component';
 import {NgxGraphModule} from '@swimlane/ngx-graph';
+import {DragDropModule} from '@angular/cdk/drag-drop';
+import {MatListModule} from '@angular/material/list';
+import {NgxChartsModule} from '@swimlane/ngx-charts';
 
 @NgModule({
   declarations: [
@@ -18,7 +21,10 @@ import {NgxGraphModule} from '@swimlane/ngx-graph';
     CommonModule,
     AutomataRoutingModule,
     SharedModule,
-    NgxGraphModule
+    NgxGraphModule,
+    DragDropModule,
+    MatListModule,
+    NgxChartsModule
   ]
 })
 export class AutomataModule {
