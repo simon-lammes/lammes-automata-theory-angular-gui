@@ -59,6 +59,7 @@
     class="chart-container"
     [draggingEnabled]="false"
     [enableZoom]="false"
+    zoomLevel="1.5"
     [view]="[700, 500]"
     [links]="links$ | async"
     [nodes]="nodes$ | async"
@@ -75,9 +76,16 @@
       <svg>
         <g class="node" ngx-tooltip [tooltipPlacement]="'top'" [tooltipType]="'tooltip'" [tooltipTitle]="node.label"
            (click)="onNodeClicked(node.id)">
-          <rect [attr.width]="node.dimension.width"
-                [attr.height]="node.dimension.height"
-                [attr.fill]="isNodeCurrentlySelected(node) ? 'rgba(243,19,19,0.27)' : 'rgba(0,0,0,0.27)'"/>
+          <circle [attr.r]="node.dimension.width/2 - 5"
+                  [attr.cx]="node.dimension.width/2"
+                  [attr.cy]="node.dimension.width/2"
+                  [attr.fill]="isNodeCurrentlySelected(node) ? 'rgba(243,19,19,0.27)' : 'rgba(0,0,0,0.27)'"/>
+          <circle [attr.r]="node.dimension.width/2 - 2"
+                  [attr.cx]="node.dimension.width/2"
+                  [attr.cy]="node.dimension.width/2"
+                  [attr.stroke-width]="2"
+                  [attr.fill]="'rgba(0,0,0,0)'"
+                  [attr.stroke]="automaton.accept_states?.includes(node.id) ? 'rgb(0,0,0)' : 'rgba(0,0,0,0)'"/>
           <text alignment-baseline="central" [attr.x]="10" [attr.y]="node.dimension.height / 2">
             {{node.label}}
           </text>
