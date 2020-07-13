@@ -58,6 +58,10 @@ interface CheckRcpResponse {
     boolean,
     string[]
   ];
+  /**
+   * Only defined if an error happened.
+   */
+  error: any;
 }
 
 @UntilDestroy()
@@ -136,7 +140,7 @@ export class AutomataService {
   }
 
   performTestsForAutomaton(automaton: Automaton): Observable<TestCaseResult[]> {
-    if (automaton.test_cases?.length === 0) {
+    if (!(automaton.test_cases?.length > 0)) {
       return of([]);
     }
     const rpcCalls = automaton.test_cases.map((testCase, index) => {
@@ -153,7 +157,7 @@ export class AutomataService {
     return this.httpClient.post<CheckRcpResponse[]>(environment.backendUrl, rpcCalls).pipe(
       map(responses => {
         return responses.map(response => {
-          const hasInputBeenAccepted = response.result[0];
+          const hasInputBeenAccepted = response.error ? false : response.result[0];
           const testCase = automaton.test_cases[response.id];
           return {
             wasTestSuccessful: hasInputBeenAccepted === testCase.expectation,
