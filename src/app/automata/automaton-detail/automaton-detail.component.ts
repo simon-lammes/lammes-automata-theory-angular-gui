@@ -19,6 +19,10 @@ interface GraphSelection {
   styleUrls: ['./automaton-detail.component.scss']
 })
 export class AutomatonDetailComponent implements OnInit {
+  /**
+   * The id of the link that comes "out of nowhere" to the start state, indicating where the start state is.
+   */
+  readonly START_LINK_ID = 'start';
   automaton$: Observable<Automaton>;
   nodes$: Observable<any[]>;
   links$: Observable<any[]>;
@@ -87,6 +91,16 @@ export class AutomatonDetailComponent implements OnInit {
         label: transition.input
       };
     });
+    // If the automaton has a start state, insert a link to it which indicates that it is the start state.
+    // This link has no predecessor which is typical for the start state link.
+    if (automaton.start_state) {
+      result.push({
+        id: this.START_LINK_ID,
+        source: undefined,
+        target: automaton.start_state,
+        label: undefined
+      });
+    }
     return result;
   }
 
@@ -98,6 +112,11 @@ export class AutomatonDetailComponent implements OnInit {
   }
 
   onLinkClicked(linkId: string): void {
+    // The link indicating the start state is static and cannot be modified.
+    // Therefore it is not clickable.
+    if (linkId === this.START_LINK_ID) {
+      return;
+    }
     this.currentSelection = {
       selectedId: linkId,
       selectedType: 'link'
