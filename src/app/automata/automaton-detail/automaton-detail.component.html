@@ -59,6 +59,7 @@
     class="chart-container"
     [draggingEnabled]="false"
     [enableZoom]="false"
+    [update$]="automaton$"
     zoomLevel="1.5"
     [view]="[700, 500]"
     [links]="links$ | async"
