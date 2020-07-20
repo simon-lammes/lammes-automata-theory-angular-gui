@@ -7,11 +7,13 @@
   }
 }
 
-// We have to use ng-deep because the chart is not defined by any of our Angular components but rather the chart library.
-.column, ::ng-deep div.ngx-charts-outer {
+.column {
+  border: 2pt solid black;
+}
+
+.padding-and-margin {
   margin: 10pt;
   padding: 10pt;
-  border: 2pt solid black;
 }
 
 mat-form-field {
