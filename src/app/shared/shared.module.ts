@@ -9,6 +9,7 @@ import {ReactiveFormsModule} from '@angular/forms';
 import {MatInputModule} from '@angular/material/input';
 import {MatMenuModule} from '@angular/material/menu';
 import {MatCheckboxModule} from '@angular/material/checkbox';
+import {MatSnackBarModule} from '@angular/material/snack-bar';
 
 @NgModule({
   declarations: [DialogHeaderComponent],
@@ -19,6 +20,7 @@ import {MatCheckboxModule} from '@angular/material/checkbox';
   ],
   exports: [
     MatDialogModule,
+    MatSnackBarModule,
     DialogHeaderComponent,
     MatButtonModule,
     MatFormFieldModule,

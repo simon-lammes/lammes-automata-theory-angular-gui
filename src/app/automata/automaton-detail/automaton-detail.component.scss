@@ -1,9 +1,14 @@
 .row {
   display: flex;
   flex-direction: row;
+
+  * {
+    flex-grow: 1;
+  }
 }
 
-.column {
+// We have to use ng-deep because the chart is not defined by any of our Angular components but rather the chart library.
+.column, ::ng-deep div.ngx-charts-outer {
   margin: 10pt;
   padding: 10pt;
   border: 2pt solid black;
@@ -11,11 +16,6 @@
 
 mat-form-field {
   display: block;
-}
-
-// We have to use ng-deep because the chart is not defined by any of our Angular components but rather the chart library.
-::ng-deep div.ngx-charts-outer {
-  border: 2pt solid black;
 }
 
 .drag-and-drop-list {
@@ -35,4 +35,19 @@ mat-form-field {
   }
 }
 
+mat-error {
+  display: block;
+}
+
+.full-width-button-list {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  margin: 10pt;
+  padding: 10pt;
+
+  button {
+    margin: 10pt 0;
+  }
+}
 

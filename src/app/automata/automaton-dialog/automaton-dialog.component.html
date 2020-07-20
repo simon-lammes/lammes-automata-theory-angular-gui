@@ -3,9 +3,12 @@
   <mat-dialog-content>
     <div class="input-field-wrapper">
       <mat-form-field>
-        <input matInput placeholder="Name" formControlName="name" required>
+        <input matInput placeholder="Name" formControlName="name" required (blur)="trimTextField(nameControl)">
         <mat-error *ngIf="nameControl.hasError('required') && nameControl.touched">
           The name cannot be empty.
+        </mat-error>
+        <mat-error *ngIf="nameControl.hasError('noneOf')&& nameControl.touched">
+          There already exists an automaton with the name "{{nameControl.value}}". Please choose a unique name.
         </mat-error>
       </mat-form-field>
     </div>

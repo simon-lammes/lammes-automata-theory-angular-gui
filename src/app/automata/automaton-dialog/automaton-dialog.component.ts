@@ -1,8 +1,11 @@
 import {Component, Inject, OnInit} from '@angular/core';
 import {MAT_DIALOG_DATA, MatDialogRef} from '@angular/material/dialog';
-import {AbstractControl, FormBuilder, FormControl, FormGroup, Validators} from '@angular/forms';
+import {AbstractControl, FormBuilder, FormGroup, Validators} from '@angular/forms';
 import {AutomataService, Automaton} from '../automata.service';
+import {RxwebValidators} from '@rxweb/reactive-form-validators';
+import {UntilDestroy, untilDestroyed} from '@ngneat/until-destroy';
 
+@UntilDestroy()
 @Component({
   selector: 'app-automaton-dialog',
   templateUrl: './automaton-dialog.component.html',
@@ -24,8 +27,14 @@ export class AutomatonDialogComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.automatonForm = this.formBuilder.group({
-      name: ['', Validators.required],
+    this.automataService.automata$.pipe(untilDestroyed(this)).subscribe(automata => {
+      const automataNames = automata.map(automaton => automaton.name);
+      this.automatonForm = this.formBuilder.group({
+        name: this.formBuilder.control('', [
+          Validators.required,
+          RxwebValidators.noneOf({matchValues: automataNames})
+        ]),
+      });
     });
   }
 
@@ -39,5 +48,13 @@ export class AutomatonDialogComponent implements OnInit {
     };
     this.automataService.saveAutomaton(automaton);
     this.dialogRef.close();
+  }
+
+  /**
+   * Removes unnecessary white spaces from the text field at the beginning and end of the string.
+   */
+  trimTextField(control: AbstractControl): void {
+    const currentValue: string = control.value;
+    control.setValue(currentValue.trim());
   }
 }

@@ -1,11 +1,13 @@
 import {Component, OnInit} from '@angular/core';
 import {ActivatedRoute} from '@angular/router';
 import {AutomataService, Automaton, TestCase, TestCaseResult, Transition} from '../automata.service';
-import {UntilDestroy} from '@ngneat/until-destroy';
-import {map, switchMap} from 'rxjs/operators';
+import {UntilDestroy, untilDestroyed} from '@ngneat/until-destroy';
+import {filter, map, pairwise, startWith, switchMap} from 'rxjs/operators';
 import {AbstractControl, FormBuilder, FormGroup, Validators} from '@angular/forms';
-import {Observable} from 'rxjs';
+import {combineLatest, Observable} from 'rxjs';
 import {CdkDragDrop} from '@angular/cdk/drag-drop';
+import {RxwebValidators} from '@rxweb/reactive-form-validators';
+import {MatSnackBar} from '@angular/material/snack-bar';
 
 interface GraphSelection {
   selectedType: 'node' | 'link';
@@ -27,6 +29,7 @@ export class AutomatonDetailComponent implements OnInit {
   nodes$: Observable<any[]>;
   links$: Observable<any[]>;
   testCaseResults$: Observable<TestCaseResult[]>;
+  doesTransitionFromFormAlreadyExist$: Observable<boolean>;
   transitionForm: FormGroup;
   testCaseForm: FormGroup;
   currentSelection: GraphSelection;
@@ -34,7 +37,8 @@ export class AutomatonDetailComponent implements OnInit {
   constructor(
     private activatedRoute: ActivatedRoute,
     private automataService: AutomataService,
-    private formBuilder: FormBuilder
+    private formBuilder: FormBuilder,
+    private snackBar: MatSnackBar
   ) {
   }
 
@@ -50,6 +54,10 @@ export class AutomatonDetailComponent implements OnInit {
     return this.transitionForm.controls.next_state;
   }
 
+  get testInputControl(): AbstractControl {
+    return this.testCaseForm.controls.test_input;
+  }
+
   ngOnInit(): void {
     this.automaton$ = this.activatedRoute.paramMap.pipe(
       switchMap(paramMap => this.automataService.getAutomatonByName(paramMap.get('automatonName')))
@@ -62,9 +70,34 @@ export class AutomatonDetailComponent implements OnInit {
       input: this.formBuilder.control('', [Validators.required, Validators.maxLength(1)]),
       next_state: ['', Validators.required]
     });
-    this.testCaseForm = this.formBuilder.group({
-      test_input: this.formBuilder.control(''),
-      expectation: this.formBuilder.control(false)
+    this.doesTransitionFromFormAlreadyExist$ = combineLatest([
+      this.automaton$,
+      this.transitionForm.valueChanges as Observable<Transition>
+    ]).pipe(
+      map(([automaton, transitionFromForm]) => {
+        return automaton.transitions.some((transition: Transition) => {
+          return transition.next_state === transitionFromForm.next_state
+            && transition.state === transitionFromForm.state
+            && transition.input === transitionFromForm.input;
+        });
+      }),
+    );
+    // We create an observable, that emits only when a test case has been added to the automaton.
+    // Whenever that happens we want to recreate the test cases form.
+    // This is convenient for automatically setting the text field values to empty.
+    this.automaton$.pipe(
+      map(automaton => automaton.test_cases),
+      startWith([] as TestCase[]),
+      pairwise(),
+      filter(([previous, current]) => previous.length < current.length),
+      map(([previous, current]) => current),
+      untilDestroyed(this)
+    ).subscribe(testCases => {
+      const existingInputs = testCases.map(testCase => testCase.test_input);
+      this.testCaseForm = this.formBuilder.group({
+        test_input: this.formBuilder.control('', RxwebValidators.noneOf({matchValues: existingInputs})),
+        expectation: this.formBuilder.control(false)
+      });
     });
   }
 
@@ -155,10 +188,6 @@ export class AutomatonDetailComponent implements OnInit {
   addTestCase(automaton: Automaton): void {
     const testCase: TestCase = this.testCaseForm.value;
     this.automataService.addTestCaseToAutomaton(automaton, testCase);
-    this.testCaseForm.reset({
-      test_input: '',
-      expectation: false
-    });
   }
 
   setStartState(automaton: Automaton, newStartState: string): void {
@@ -198,5 +227,23 @@ export class AutomatonDetailComponent implements OnInit {
       return;
     }
     this.automataService.changeTestCaseOrder(automaton, event.previousIndex, event.currentIndex);
+  }
+
+  /**
+   * Removes unnecessary white spaces from the text field at the beginning and end of the string.
+   */
+  trimTextField(control: AbstractControl): void {
+    const currentValue: string = control.value;
+    control.setValue(currentValue.trim());
+  }
+
+  removeWhitespacesFromTextField(testInputControl: AbstractControl): void {
+    const value: string = testInputControl.value;
+    // Replace any whitespace characters.
+    const newValue = value.replace(/\s/g, '');
+    if (newValue.length < value.length) {
+      testInputControl.setValue(newValue);
+      this.snackBar.open('White Spaces as input for test cases are not allowed and automatically removed.', 'OK');
+    }
   }
 }

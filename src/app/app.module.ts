@@ -24,7 +24,9 @@ import {HttpClientModule} from '@angular/common/http';
         maxWidth: '400pt',
         maxHeight: '400pt',
         height: '98%',
-        width: '98%'
+        width: '98%',
+        closeOnNavigation: true,
+        hasBackdrop: true
       } as MatDialogConfig
     }
   ],
