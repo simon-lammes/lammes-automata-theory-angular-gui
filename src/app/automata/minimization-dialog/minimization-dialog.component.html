@@ -1,0 +1,15 @@
+<app-dialog-header [heading]="'Minimize Automaton'" (cancelled)="cancel()"></app-dialog-header>
+<h1>Inaccessible States</h1>
+<div *ngIf="data.removedStates.length === 0">No inaccessible states.</div>
+<ul>
+  <li *ngFor="let state of data.removedStates">{{state}}</li>
+</ul>
+<h1>Merged states</h1>
+<div *ngIf="!doRenamingOperationsExist()">No merged states.</div>
+<ul>
+  <li *ngFor="let renaming of data.renamingOperations | keyvalue">{{renaming.key}} is the new merged state from {{renaming.value}}</li>
+</ul>
+<mat-divider></mat-divider>
+<div>
+  <button mat-raised-button color="accent" [disabled]="!doRenamingOperationsExist() && data.removedStates.length === 0" (click)="persistMinimization()">Persist minimization</button>
+</div>

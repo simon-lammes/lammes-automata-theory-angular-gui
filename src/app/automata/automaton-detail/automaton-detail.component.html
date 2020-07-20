@@ -28,10 +28,17 @@
             </mat-error>
           </mat-form-field>
         </div>
-        <div *ngIf="doesTransitionFromFormAlreadyExist$ | async" style="color: red;">This transition does already exist.</div>
-        <button mat-button type="submit" [disabled]="(doesTransitionFromFormAlreadyExist$ | async) || transitionForm.invalid">
-          Add Transition
-        </button>
+        <div *ngIf="isTransitionFromFormRedundant$ | async" style="color: red;">
+          There is already a transition from the state "{{stateControl.value}}" for the input "{{inputControl.value}}"
+        </div>
+        <div class="row">
+          <button mat-button type="submit" [disabled]="(isTransitionFromFormRedundant$ | async) || transitionForm.invalid">
+            Add Transition
+          </button>
+          <button type="button" mat-stroked-button (click)="minimize(automaton)">
+            Minimize
+          </button>
+        </div>
       </form>
     </div>
     <div class="column" cdkDropListGroup>

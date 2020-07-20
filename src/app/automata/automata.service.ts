@@ -64,6 +64,50 @@ interface CheckRcpResponse {
   error: any;
 }
 
+interface MinimizeRcpCall {
+  id: number;
+  jsonrpc: '2.0';
+  method: 'minimize';
+  params: [
+    Automaton,
+  ];
+}
+
+interface MinimizeRcpResponse {
+  id: number;
+  jsonrpc: '2.0';
+  /**
+   * The first value is the minimized automaton.
+   * The second are the removed states.
+   * The third is an object, mapping the new merged state names to their previous state names.
+   */
+  result: [
+    Automaton,
+    string[],
+    {
+      [key: string]: string[]
+    }
+  ];
+  /**
+   * Only defined if an error happened.
+   */
+  error: any;
+}
+
+/**
+ * Wraps the mutations which are done when an automaton is minimized.
+ */
+export interface Minimization {
+  newAutomaton: Automaton;
+  removedStates: string[];
+  /**
+   * An object, mapping the new merged state names to their previous state names.
+   */
+  renamingOperations: {
+    [key: string]: string[]
+  };
+}
+
 @UntilDestroy()
 @Injectable({
   providedIn: 'root'
@@ -123,6 +167,7 @@ export class AutomataService {
   removeTransitionFromAutomaton(mutatedAutomaton: Automaton, transitionIndex: number): void {
     this.updateAutomaton(mutatedAutomaton.name, (automaton: Automaton) => {
       automaton.transitions = automaton.transitions.filter((value, index) => index !== transitionIndex);
+      this.cleanUpAcceptStatesAndStartState(automaton);
     });
   }
 
@@ -130,6 +175,7 @@ export class AutomataService {
     this.updateAutomaton(mutatedAutomaton.name, (automaton: Automaton) => {
       automaton.transitions = automaton.transitions?.filter(transition =>
         transition.state !== removedState && transition.next_state !== removedState) ?? [];
+      this.cleanUpAcceptStatesAndStartState(automaton);
     });
   }
 
@@ -193,6 +239,46 @@ export class AutomataService {
     });
   }
 
+  changeTestCaseOrder(mutatedAutomaton: Automaton, previousIndex: number, currentIndex: number): void {
+    this.updateAutomaton(mutatedAutomaton.name, (automaton: Automaton) => {
+      moveItemInArray(automaton.test_cases, previousIndex, currentIndex);
+    });
+  }
+
+  /**
+   * Asks the backend how the automaton **would** be minimized but does not persist any changes.
+   */
+  doMinimizationForAutomaton(automaton: Automaton): Observable<Minimization> {
+    const rpcCall: MinimizeRcpCall = {
+      jsonrpc: '2.0',
+      method: 'minimize',
+      id: 1,
+      params: [
+        automaton
+      ]
+    };
+    return this.httpClient.post<MinimizeRcpResponse>(environment.backendUrl, rpcCall).pipe(
+      map(response => {
+        if (response.error) {
+          return undefined;
+        }
+        return {
+          newAutomaton: response.result[0],
+          removedStates: response.result[1],
+          renamingOperations: response.result[2]
+        } as Minimization;
+      })
+    );
+  }
+
+  persistMinimization(minimization: Minimization): void {
+    this.updateAutomaton(minimization.newAutomaton.name, (automaton: Automaton) => {
+      automaton.transitions = minimization.newAutomaton.transitions;
+      automaton.accept_states = minimization.newAutomaton.accept_states;
+      automaton.start_state = minimization.newAutomaton.start_state;
+    });
+  }
+
   /**
    * Finds the automaton which should be updated by name.
    * Then performs to provided mutation on that automaton and then saves the changes.
@@ -211,9 +297,22 @@ export class AutomataService {
     );
   }
 
-  changeTestCaseOrder(mutatedAutomaton: Automaton, previousIndex: number, currentIndex: number): void {
-    this.updateAutomaton(mutatedAutomaton.name, (automaton: Automaton) => {
-      moveItemInArray(automaton.test_cases, previousIndex, currentIndex);
-    });
+  /**
+   * Should be called whenever transitions have been removed from an automaton.
+   * Example: Say through the removal of a transition the state q0 has been removed.
+   * q0 has been an accepting state and the start state. The properties for start state and
+   * accepting states have to be adopted. Otherwise, when the user adds the state q0 back in, it would be
+   * immediately an accepting start state which would be weird behaviour. The user expects new states to neither be
+   * accepting nor a start state.
+   */
+  private cleanUpAcceptStatesAndStartState(automaton: Automaton): void {
+    const states = this.getStatesOfAutomaton(automaton);
+    automaton.start_state = states.has(automaton.start_state) ? automaton.start_state : undefined;
+    automaton.accept_states = automaton.accept_states.filter(acceptState => states.has(acceptState));
+  }
+
+  private getStatesOfAutomaton(automaton: Automaton): Set<string> {
+    return automaton.transitions.map(transition => new Set([transition.state, transition.next_state]))
+      .reduce((previousArray, currentArray) => new Set([...previousArray, ...currentArray]), new Set());
   }
 }

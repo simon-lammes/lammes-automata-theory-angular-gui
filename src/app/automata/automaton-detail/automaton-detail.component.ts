@@ -2,12 +2,14 @@ import {Component, OnInit} from '@angular/core';
 import {ActivatedRoute} from '@angular/router';
 import {AutomataService, Automaton, TestCase, TestCaseResult, Transition} from '../automata.service';
 import {UntilDestroy, untilDestroyed} from '@ngneat/until-destroy';
-import {filter, map, pairwise, startWith, switchMap} from 'rxjs/operators';
+import {filter, first, map, pairwise, startWith, switchMap} from 'rxjs/operators';
 import {AbstractControl, FormBuilder, FormGroup, Validators} from '@angular/forms';
 import {combineLatest, Observable} from 'rxjs';
 import {CdkDragDrop} from '@angular/cdk/drag-drop';
 import {RxwebValidators} from '@rxweb/reactive-form-validators';
 import {MatSnackBar} from '@angular/material/snack-bar';
+import {MatDialog} from '@angular/material/dialog';
+import {MinimizationDialogComponent} from '../minimization-dialog/minimization-dialog.component';
 
 interface GraphSelection {
   selectedType: 'node' | 'link';
@@ -29,7 +31,7 @@ export class AutomatonDetailComponent implements OnInit {
   nodes$: Observable<any[]>;
   links$: Observable<any[]>;
   testCaseResults$: Observable<TestCaseResult[]>;
-  doesTransitionFromFormAlreadyExist$: Observable<boolean>;
+  isTransitionFromFormRedundant$: Observable<boolean>;
   transitionForm: FormGroup;
   testCaseForm: FormGroup;
   currentSelection: GraphSelection;
@@ -38,7 +40,8 @@ export class AutomatonDetailComponent implements OnInit {
     private activatedRoute: ActivatedRoute,
     private automataService: AutomataService,
     private formBuilder: FormBuilder,
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
+    private readonly dialog: MatDialog
   ) {
   }
 
@@ -70,14 +73,20 @@ export class AutomatonDetailComponent implements OnInit {
       input: this.formBuilder.control('', [Validators.required, Validators.maxLength(1)]),
       next_state: ['', Validators.required]
     });
-    this.doesTransitionFromFormAlreadyExist$ = combineLatest([
+    this.isTransitionFromFormRedundant$ = combineLatest([
       this.automaton$,
       this.transitionForm.valueChanges as Observable<Transition>
     ]).pipe(
       map(([automaton, transitionFromForm]) => {
+        if (!automaton.transitions) {
+          return false;
+        }
         return automaton.transitions.some((transition: Transition) => {
-          return transition.next_state === transitionFromForm.next_state
-            && transition.state === transitionFromForm.state
+          // The transition is redundant when the state and input is equal.
+          // The next state does not matter here.
+          // Example: If you already have a transition (q0, '1') => q2,
+          // you cannot have a transition (q0, '1') => q3.
+          return transition.state === transitionFromForm.state
             && transition.input === transitionFromForm.input;
         });
       }),
@@ -89,11 +98,16 @@ export class AutomatonDetailComponent implements OnInit {
       map(automaton => automaton.test_cases),
       startWith([] as TestCase[]),
       pairwise(),
-      filter(([previous, current]) => previous.length < current.length),
+      filter(([previous, current]) => {
+        if (!previous || !current) {
+          return true;
+        }
+        return previous?.length < current?.length;
+      }),
       map(([previous, current]) => current),
       untilDestroyed(this)
     ).subscribe(testCases => {
-      const existingInputs = testCases.map(testCase => testCase.test_input);
+      const existingInputs = testCases ? testCases.map(testCase => testCase.test_input) : [];
       this.testCaseForm = this.formBuilder.group({
         test_input: this.formBuilder.control('', RxwebValidators.noneOf({matchValues: existingInputs})),
         expectation: this.formBuilder.control(false)
@@ -245,5 +259,10 @@ export class AutomatonDetailComponent implements OnInit {
       testInputControl.setValue(newValue);
       this.snackBar.open('White Spaces as input for test cases are not allowed and automatically removed.', 'OK');
     }
+  }
+
+  async minimize(automaton: Automaton): Promise<void> {
+    const minimization = await this.automataService.doMinimizationForAutomaton(automaton).pipe(first()).toPromise();
+    this.dialog.open(MinimizationDialogComponent, {data: minimization});
   }
 }

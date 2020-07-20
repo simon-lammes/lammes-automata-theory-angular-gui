@@ -10,12 +10,14 @@ import {NgxGraphModule} from '@swimlane/ngx-graph';
 import {DragDropModule} from '@angular/cdk/drag-drop';
 import {MatListModule} from '@angular/material/list';
 import {NgxChartsModule} from '@swimlane/ngx-charts';
+import {MinimizationDialogComponent} from './minimization-dialog/minimization-dialog.component';
 
 @NgModule({
   declarations: [
     AutomataComponent,
     AutomatonDialogComponent,
-    AutomatonDetailComponent
+    AutomatonDetailComponent,
+    MinimizationDialogComponent
   ],
   imports: [
     CommonModule,
