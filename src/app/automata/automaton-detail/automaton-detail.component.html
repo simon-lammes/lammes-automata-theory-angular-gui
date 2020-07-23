@@ -6,13 +6,13 @@
       <form *ngIf="transitionForm" [formGroup]="transitionForm" (ngSubmit)="addTransition(automaton)">
         <div class="input-field-wrapper">
           <mat-form-field>
-            <input matInput placeholder="State" formControlName="state" (blur)="trimTextField(stateControl)">
+            <input matInput placeholder="State" formControlName="state" (blur)="trimTextFieldAndRemoveSequentialWhitespaces(stateControl)">
             <mat-error *ngIf="stateControl.touched && stateControl.hasError('required') && stateControl.touched">
               The state cannot be empty.
             </mat-error>
           </mat-form-field>
           <mat-form-field>
-            <input matInput placeholder="Input" formControlName="input" (blur)="trimTextField(inputControl)">
+            <input matInput placeholder="Input" formControlName="input" (blur)="trimTextFieldAndRemoveSequentialWhitespaces(inputControl)">
             <mat-error *ngIf="inputControl.touched && inputControl.hasError('required') && inputControl.touched">
               The input cannot be empty.
             </mat-error>
@@ -21,7 +21,7 @@
             </mat-error>
           </mat-form-field>
           <mat-form-field>
-            <input matInput placeholder="Next State" formControlName="next_state" (blur)="trimTextField(nextStateControl)">
+            <input matInput placeholder="Next State" formControlName="next_state" (blur)="trimTextFieldAndRemoveSequentialWhitespaces(nextStateControl)">
             <mat-error
               *ngIf="nextStateControl.touched && nextStateControl.hasError('required') && nextStateControl.touched">
               The next state cannot be empty.

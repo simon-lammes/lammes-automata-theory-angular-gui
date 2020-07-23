@@ -22,6 +22,9 @@ export class MinimizationDialogComponent {
   }
 
   doRenamingOperationsExist(): boolean {
+    if (!this.data?.removedStates) {
+      return false;
+    }
     return Object.keys(this.data.renamingOperations).length > 0;
   }
 

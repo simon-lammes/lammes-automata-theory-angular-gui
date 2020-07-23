@@ -245,10 +245,12 @@ export class AutomatonDetailComponent implements OnInit {
 
   /**
    * Removes unnecessary white spaces from the text field at the beginning and end of the string.
+   * Furthermore replaces sequential whitespaces with just one whitespace. "a  a" becomes "a a".
    */
-  trimTextField(control: AbstractControl): void {
-    const currentValue: string = control.value;
-    control.setValue(currentValue.trim());
+  trimTextFieldAndRemoveSequentialWhitespaces(control: AbstractControl): void {
+    const value: string = control.value;
+    const newValue = value.trim().replace(/\s+/g, ' ');
+    control.setValue(newValue);
   }
 
   removeWhitespacesFromTextField(testInputControl: AbstractControl): void {
