@@ -1,5 +1,8 @@
 <div *ngIf="automaton$ | async as automaton" style="width: 100%">
-  <h1>{{automaton.name}}</h1>
+  <h1>
+    <button mat-stroked-button routerLink="/automata">Back to Automata</button>
+    {{automaton.name}}
+  </h1>
   <div class="row">
     <div class="column padding-and-margin">
       <h2>Transitions</h2>
@@ -28,11 +31,11 @@
             </mat-error>
           </mat-form-field>
         </div>
-        <div *ngIf="isTransitionFromFormRedundant$ | async" style="color: red;">
+        <div *ngIf="isTransitionFormValueRedundant$ | async" style="color: red;">
           There is already a transition from the state "{{stateControl.value}}" for the input "{{inputControl.value}}"
         </div>
         <div class="row">
-          <button mat-button type="submit" [disabled]="(isTransitionFromFormRedundant$ | async) || transitionForm.invalid">
+          <button mat-button type="submit" [disabled]="(isTransitionFormValueRedundant$ | async) || transitionForm.invalid">
             Add Transition
           </button>
           <button type="button" mat-stroked-button (click)="minimize(automaton)">

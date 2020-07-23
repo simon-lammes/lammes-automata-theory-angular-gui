@@ -1,5 +1,5 @@
 import {Component, OnInit} from '@angular/core';
-import {ActivatedRoute} from '@angular/router';
+import {ActivatedRoute, Router} from '@angular/router';
 import {AutomataService, Automaton, TestCase, TestCaseResult, Transition} from '../automata.service';
 import {UntilDestroy, untilDestroyed} from '@ngneat/until-destroy';
 import {filter, first, map, pairwise, startWith, switchMap} from 'rxjs/operators';
@@ -28,12 +28,24 @@ export class AutomatonDetailComponent implements OnInit {
    */
   readonly START_LINK_ID = 'start';
   automaton$: Observable<Automaton>;
+  /**
+   * Nodes in the network graph.
+   */
   nodes$: Observable<any[]>;
+  /**
+   * Links in the network graph.
+   */
   links$: Observable<any[]>;
   testCaseResults$: Observable<TestCaseResult[]>;
-  isTransitionFromFormRedundant$: Observable<boolean>;
+  /**
+   * If the transition form value is redundant, we prevent the user from adding that transition.
+   */
+  isTransitionFormValueRedundant$: Observable<boolean>;
   transitionForm: FormGroup;
   testCaseForm: FormGroup;
+  /**
+   * Which part of the network graph is currently selected.
+   */
   currentSelection: GraphSelection;
 
   constructor(
@@ -41,7 +53,8 @@ export class AutomatonDetailComponent implements OnInit {
     private automataService: AutomataService,
     private formBuilder: FormBuilder,
     private snackBar: MatSnackBar,
-    private readonly dialog: MatDialog
+    private readonly dialog: MatDialog,
+    private router: Router
   ) {
   }
 
@@ -65,15 +78,25 @@ export class AutomatonDetailComponent implements OnInit {
     this.automaton$ = this.activatedRoute.paramMap.pipe(
       switchMap(paramMap => this.automataService.getAutomatonByName(paramMap.get('automatonName')))
     );
+    // The url might be incorrect which leads to no automaton being found.
+    // In that case, we redirect the user.
+    this.automaton$.pipe(untilDestroyed(this)).subscribe(automaton => {
+      if (!automaton) {
+        this.router.navigateByUrl('/automata');
+      }
+    });
     this.nodes$ = this.automaton$.pipe(map(automaton => this.getNodesForAutomaton(automaton)));
     this.links$ = this.automaton$.pipe(map(automaton => this.getLinksForAutomaton(automaton)));
     this.testCaseResults$ = this.automaton$.pipe(switchMap(automaton => this.automataService.performTestsForAutomaton(automaton)));
     this.transitionForm = this.formBuilder.group({
       state: ['', Validators.required],
-      input: this.formBuilder.control('', [Validators.required, Validators.maxLength(1)]),
+      input: this.formBuilder.control('', [
+        Validators.required,
+        Validators.maxLength(1)
+      ]),
       next_state: ['', Validators.required]
     });
-    this.isTransitionFromFormRedundant$ = combineLatest([
+    this.isTransitionFormValueRedundant$ = combineLatest([
       this.automaton$,
       this.transitionForm.valueChanges as Observable<Transition>
     ]).pipe(
