@@ -49,9 +49,12 @@
         <div mat-subheader>Test Cases</div>
         <div cdkDropList class="drag-and-drop-list" (cdkDropListDropped)="dropTestCase(automaton, $event)">
           <mat-list-item class="drag-and-drop-item" *ngFor="let result of testCaseResults$ | async" cdkDrag>
-            <mat-icon mat-list-icon>{{result.wasTestSuccessful ? 'done' : 'close'}}</mat-icon>
+            <mat-icon mat-list-icon [style]="result.wasTestSuccessful ? 'color: green;' : 'color: red;'">{{result.wasTestSuccessful ? 'done' : 'close'}}</mat-icon>
             <div mat-line>{{result.testCase.test_input}}</div>
             <div mat-line>Expectation: {{result.testCase.expectation ? 'Accept' : 'Reject'}}</div>
+            <button mat-icon-button matTooltip="Simulate" (click)="simulate(result)">
+              <mat-icon>play_arrow</mat-icon>
+            </button>
           </mat-list-item>
         </div>
       </mat-list>

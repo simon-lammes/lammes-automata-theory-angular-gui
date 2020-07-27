@@ -10,6 +10,7 @@ import {MatInputModule} from '@angular/material/input';
 import {MatMenuModule} from '@angular/material/menu';
 import {MatCheckboxModule} from '@angular/material/checkbox';
 import {MatSnackBarModule} from '@angular/material/snack-bar';
+import {MatTooltipModule} from '@angular/material/tooltip';
 
 @NgModule({
   declarations: [DialogHeaderComponent],
@@ -21,6 +22,7 @@ import {MatSnackBarModule} from '@angular/material/snack-bar';
   exports: [
     MatDialogModule,
     MatSnackBarModule,
+    MatTooltipModule,
     DialogHeaderComponent,
     MatButtonModule,
     MatFormFieldModule,

@@ -4,12 +4,13 @@ import {AutomataService, Automaton, TestCase, TestCaseResult, Transition} from '
 import {UntilDestroy, untilDestroyed} from '@ngneat/until-destroy';
 import {filter, first, map, pairwise, startWith, switchMap} from 'rxjs/operators';
 import {AbstractControl, FormBuilder, FormGroup, Validators} from '@angular/forms';
-import {combineLatest, Observable} from 'rxjs';
+import {combineLatest, Observable, of} from 'rxjs';
 import {CdkDragDrop} from '@angular/cdk/drag-drop';
 import {RxwebValidators} from '@rxweb/reactive-form-validators';
 import {MatSnackBar} from '@angular/material/snack-bar';
 import {MatDialog} from '@angular/material/dialog';
 import {MinimizationDialogComponent} from '../minimization-dialog/minimization-dialog.component';
+import {SimulationDialogComponent, SimulationDialogData} from '../simulation-dialog/simulation-dialog.component';
 
 interface GraphSelection {
   selectedType: 'node' | 'link';
@@ -74,6 +75,10 @@ export class AutomatonDetailComponent implements OnInit {
     return this.testCaseForm.controls.test_input;
   }
 
+  get expectationControl(): AbstractControl {
+    return this.testCaseForm.controls.expectation;
+  }
+
   ngOnInit(): void {
     this.automaton$ = this.activatedRoute.paramMap.pipe(
       switchMap(paramMap => this.automataService.getAutomatonByName(paramMap.get('automatonName')))
@@ -114,9 +119,14 @@ export class AutomatonDetailComponent implements OnInit {
         });
       }),
     );
-    // We create an observable, that emits only when a test case has been added to the automaton.
-    // Whenever that happens we want to recreate the test cases form.
-    // This is convenient for automatically setting the text field values to empty.
+    // We create an observable, that emits only when a test case has been added or removed.
+    // Whenever that happens we want to recreate the test cases form. This is necessary because
+    // we update the validator that checks that no duplicate test string are added.
+    // Whenever a test case has been added, we additionally reset the field values.
+    // This is because the user does not want the text field to contain the test string that he just added.
+    // However, if this observable fires because a test case has been deleted, just the validators are updates
+    // but the field values remain. This is because the user doesn't want his input to be lost whenever he deletes
+    // a test case.
     this.automaton$.pipe(
       map(automaton => automaton.test_cases),
       startWith([] as TestCase[]),
@@ -125,15 +135,18 @@ export class AutomatonDetailComponent implements OnInit {
         if (!previous || !current) {
           return true;
         }
-        return previous?.length < current?.length;
+        return previous?.length !== current?.length;
       }),
-      map(([previous, current]) => current),
       untilDestroyed(this)
-    ).subscribe(testCases => {
-      const existingInputs = testCases ? testCases.map(testCase => testCase.test_input) : [];
+    ).subscribe(([previous, current]) => {
+      const existingInputs = current ? current.map(testCase => testCase.test_input) : [];
+      // If a test case has been added, we reset the input field values.
+      // Otherwise we leave them unchanged.
+      const hasTestCaseBeenAdded = previous?.length < current?.length;
       this.testCaseForm = this.formBuilder.group({
-        test_input: this.formBuilder.control('', RxwebValidators.noneOf({matchValues: existingInputs})),
-        expectation: this.formBuilder.control(false)
+        test_input: this.formBuilder.control(!hasTestCaseBeenAdded ? this.testInputControl.value : '',
+          RxwebValidators.noneOf({matchValues: existingInputs})),
+        expectation: this.formBuilder.control(!hasTestCaseBeenAdded ? this.expectationControl.value : false)
       });
     });
   }
@@ -289,5 +302,21 @@ export class AutomatonDetailComponent implements OnInit {
   async minimize(automaton: Automaton): Promise<void> {
     const minimization = await this.automataService.doMinimizationForAutomaton(automaton).pipe(first()).toPromise();
     this.dialog.open(MinimizationDialogComponent, {data: minimization});
+  }
+
+  /**
+   * Opens a simulation that shows how is test case is executed on an automaton.
+   */
+  simulate(result: TestCaseResult): void {
+    this.dialog.open(SimulationDialogComponent, {
+      data: {
+        automaton$: this.automaton$,
+        result$: of(result)
+      } as SimulationDialogData,
+      height: '98%',
+      width: '98%',
+      maxHeight: '98%',
+      maxWidth: '98%'
+    });
   }
 }

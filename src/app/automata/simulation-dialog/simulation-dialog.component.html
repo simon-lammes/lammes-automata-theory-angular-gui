@@ -1,0 +1,25 @@
+<div>
+  <app-dialog-header [heading]="'Simulation'" (cancelled)="cancel()"></app-dialog-header>
+  <mat-dialog-content>
+    <app-automaton-network-graph [automaton$]="automaton$" [isSelectionEnabled]="false"
+                                 [selection]="currentState$ | async"></app-automaton-network-graph>
+    <div class="mat-display-2 info-box">
+      <span>{{ processedInput$ | async }}</span>
+      <span style="color: red">|</span>
+      <span>{{ upcomingInput$ | async }}</span>
+      <div class="mat-caption">{{ nextStepExplanation$ | async }}</div>
+    </div>
+  </mat-dialog-content>
+  <mat-dialog-actions>
+    <button [matTooltip]="'Previous Step'" mat-icon-button type="button" (click)="previous()" [disabled]="!(isPreviousStepAvailable$ | async)">
+      <mat-icon>skip_previous</mat-icon>
+    </button>
+    <button [matTooltip]="'Next Step'" mat-icon-button type="button" (click)="next()" [disabled]="!(isNextStepAvailable$ | async)">
+      <mat-icon>skip_next</mat-icon>
+    </button>
+    <button mat-button type="button" (click)="cancel()" [disabled]="(isNextStepAvailable$ | async)">
+      Finish
+    </button>
+  </mat-dialog-actions>
+</div>
+

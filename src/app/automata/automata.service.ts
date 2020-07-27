@@ -34,7 +34,16 @@ export interface Automaton {
 
 export interface TestCaseResult {
   testCase: TestCase;
+  /**
+   * True, when the expectation matches the actual result. For example, if we expect the automaton to reject
+   * the input and it is actually rejected, this is true.
+   */
   wasTestSuccessful: boolean;
+  hasInputBeenAccepted: boolean;
+  /**
+   * The states that were visited when the test case was run on the automaton.
+   */
+  visitedStates: string[];
 }
 
 interface CheckRcpCall {
@@ -112,7 +121,6 @@ export interface Minimization {
 @Injectable({
   providedIn: 'root'
 })
-// @ts-ignore
 export class AutomataService {
   automataBehaviourSubject: BehaviorSubject<Automaton[]>;
   automata$: Observable<Automaton[]>;
@@ -204,12 +212,15 @@ export class AutomataService {
       map(responses => {
         return responses.map(response => {
           const hasInputBeenAccepted = response.error ? false : response.result[0];
+          const visitedStates = response.error ? [] : response.result[1];
           const testCase = automaton.test_cases[response.id];
           return {
             wasTestSuccessful: hasInputBeenAccepted === testCase.expectation,
-            testCase
-          };
-        }) as TestCaseResult[];
+            hasInputBeenAccepted,
+            testCase,
+            visitedStates
+          } as TestCaseResult;
+        });
       })
     );
   }

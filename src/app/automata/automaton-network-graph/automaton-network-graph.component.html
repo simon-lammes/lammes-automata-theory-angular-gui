@@ -1,0 +1,57 @@
+<ngx-graph
+  *ngIf="automaton$ | async as automaton"
+  [draggingEnabled]="false"
+  [enableZoom]="false"
+  [update$]="automaton$"
+  zoomLevel="1.5"
+  [view]="[width, height]"
+  [links]="links$ | async"
+  [nodes]="nodes$ | async"
+  layout="dagreCluster">
+  <ng-template #defsTemplate>
+    <svg>
+      <marker id="arrow" viewBox="0 -5 10 10" refX="8" refY="0" markerWidth="4" markerHeight="4" orient="auto">
+        <path d="M0,-5L10,0L0,5" class="arrow-head"/>
+      </marker>
+    </svg>
+  </ng-template>
+
+  <ng-template #nodeTemplate let-node>
+    <svg>
+      <g class="node" ngx-tooltip [tooltipPlacement]="'top'" [tooltipType]="'tooltip'" [tooltipTitle]="node.label"
+         (click)="onNodeClicked(node.id)">
+        <circle [attr.r]="node.dimension.width/2 - 5"
+                [attr.cx]="node.dimension.width/2"
+                [attr.cy]="node.dimension.width/2"
+                [attr.fill]="isNodeCurrentlySelected(node) ? 'rgba(243,19,19,0.27)' : 'rgba(0,0,0,0.27)'"/>
+        <circle [attr.r]="node.dimension.width/2 - 2"
+                [attr.cx]="node.dimension.width/2"
+                [attr.cy]="node.dimension.width/2"
+                [attr.stroke-width]="2"
+                [attr.fill]="'rgba(0,0,0,0)'"
+                [attr.stroke]="automaton.accept_states?.includes(node.id) ? 'rgb(0,0,0)' : 'rgba(0,0,0,0)'"/>
+        <text alignment-baseline="central" [attr.x]="10" [attr.y]="node.dimension.height / 2">
+          {{node.label}}
+        </text>
+      </g>
+    </svg>
+  </ng-template>
+
+  <ng-template #linkTemplate let-link>
+    <svg:g class="edge" (click)="onLinkClicked(link.id)">
+      <svg:path class="line" stroke-width="2" marker-end="url(#arrow)"
+                [attr.stroke]="isLinkCurrentlySelected(link) ? 'rgb(255,0,0)' : 'rgb(0,0,0)'"></svg:path>
+      <svg:text class="edge-label" text-anchor="middle">
+        <textPath
+          class="text-path"
+          [attr.href]="'#' + link.id"
+          [attr.fill]="isLinkCurrentlySelected(link) ? 'rgb(255,0,0)' : 'rgb(0,0,0)'"
+          [style.dominant-baseline]="link.dominantBaseline"
+          startOffset="50%"
+        >
+          {{link.label}}
+        </textPath>
+      </svg:text>
+    </svg:g>
+  </ng-template>
+</ngx-graph>
