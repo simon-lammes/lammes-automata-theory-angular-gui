@@ -49,7 +49,20 @@ export class AutomatonNetworkGraphComponent implements OnInit {
    */
   links$: Observable<any[]>;
 
-  constructor() {
+  /**
+   * The link id is somethink like 'link-6' and this method extracts the 6.
+   */
+  private static getTransitionIndexFromLinkId(linkId: string): number {
+    return +linkId.substr(5);
+  }
+
+  /**
+   * The library ngx-graph does not properly work with link ids which can be transformed to a number.
+   * Therefore we cannot set the link id to a string like '6'. Instead we prepend some string like 'link-' to
+   * make it 'link-6'.
+   */
+  private static getLinkIdForTransitionIndex(transitionIndex: number): string {
+    return `link-${transitionIndex}`;
   }
 
   ngOnInit(): void {
@@ -84,7 +97,7 @@ export class AutomatonNetworkGraphComponent implements OnInit {
     const transitions = automaton?.transitions ?? [];
     const result = transitions.map((transition, index) => {
       return {
-        id: `link-${index}`,
+        id: AutomatonNetworkGraphComponent.getLinkIdForTransitionIndex(index),
         source: transition.state,
         target: transition.next_state,
         label: transition.input
@@ -123,14 +136,12 @@ export class AutomatonNetworkGraphComponent implements OnInit {
     if (linkId === this.START_LINK_ID) {
       return;
     }
-    console.log(linkId);
-    const transitionIndex = +linkId.substr(5);
-    console.log(transitionIndex);
+    const transitionIndex = AutomatonNetworkGraphComponent.getTransitionIndexFromLinkId(linkId);
     this.selection = transitionIndex;
     this.selectionChange.emit(this.selection);
   }
 
   isLinkCurrentlySelected(link: any): boolean {
-    return typeof this.selection === 'number' && this.selection.toString() === link.id;
+    return typeof this.selection === 'number' && AutomatonNetworkGraphComponent.getLinkIdForTransitionIndex(this.selection) === link.id;
   }
 }

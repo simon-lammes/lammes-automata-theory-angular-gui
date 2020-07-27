@@ -233,7 +233,7 @@ export class AutomataService {
 
   addAcceptState(mutatedAutomaton: Automaton, newAcceptState: string): void {
     this.updateAutomaton(mutatedAutomaton.name, (automaton: Automaton) => {
-      automaton.accept_states = [...automaton.accept_states ?? [], newAcceptState];
+      automaton.accept_states = [...automaton.accept_states ?? [], newAcceptState].filter(state => !!state);
     });
   }
 

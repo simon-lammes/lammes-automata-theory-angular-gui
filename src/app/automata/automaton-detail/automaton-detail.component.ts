@@ -12,11 +12,6 @@ import {MatDialog} from '@angular/material/dialog';
 import {MinimizationDialogComponent} from '../minimization-dialog/minimization-dialog.component';
 import {SimulationDialogComponent, SimulationDialogData} from '../simulation-dialog/simulation-dialog.component';
 
-interface GraphSelection {
-  selectedType: 'node' | 'link';
-  selectedId: any;
-}
-
 @UntilDestroy()
 @Component({
   selector: 'app-automaton-detail',
@@ -45,9 +40,16 @@ export class AutomatonDetailComponent implements OnInit {
   transitionForm: FormGroup;
   testCaseForm: FormGroup;
   /**
-   * Which part of the network graph is currently selected.
+   * Determines which state or transition is currently selected. Undefined, if nothing is selected.
+   * If it is a number, the number specifies the index of the selected transition.
+   * If it is a string, that string is the name of the selected state.
+   * I know that one should strive for more intuitive interfaces but I haven't found significantly better
+   * solutions in TypeScript. In Rust of course, one could just create an enum `Selection` with the values
+   * `StateSelection` and `TransitionSelection`, where StateSelection holds a string and TransitionSelection holds a number.
+   * This would be a very intuitive solution in my opinion, however, in TypeScript, we do not have that
+   * powerful enums.
    */
-  currentSelection: GraphSelection;
+  currentSelection: number | string;
 
   constructor(
     private activatedRoute: ActivatedRoute,
@@ -155,13 +157,12 @@ export class AutomatonDetailComponent implements OnInit {
     const transitions = automaton?.transitions ?? [];
     const states = transitions.map(transition => new Set([transition.state, transition.next_state]))
       .reduce((previousArray, currentArray) => new Set([...previousArray, ...currentArray]), new Set());
-    const result = [...states].map(state => {
+    return [...states].map(state => {
       return {
         id: state,
         label: state
       };
     });
-    return result;
   }
 
   getLinksForAutomaton(automaton: Automaton): any[] {
@@ -187,34 +188,7 @@ export class AutomatonDetailComponent implements OnInit {
     return result;
   }
 
-  onNodeClicked(nodeId: string): void {
-    this.currentSelection = {
-      selectedId: nodeId,
-      selectedType: 'node'
-    };
-  }
-
-  onLinkClicked(linkId: string): void {
-    // The link indicating the start state is static and cannot be modified.
-    // Therefore it is not clickable.
-    if (linkId === this.START_LINK_ID) {
-      return;
-    }
-    this.currentSelection = {
-      selectedId: linkId,
-      selectedType: 'link'
-    };
-  }
-
-  isNodeCurrentlySelected(node: any): boolean {
-    return this.currentSelection?.selectedType === 'node' && this.currentSelection.selectedId === node.id;
-  }
-
-  isLinkCurrentlySelected(link: any): boolean {
-    return this.currentSelection?.selectedType === 'link' && this.currentSelection.selectedId === link.id;
-  }
-
-  async addTransition(automaton: Automaton): Promise<void> {
+  addTransition(automaton: Automaton): void {
     const transition: Transition = this.transitionForm.value;
     this.automataService.addTransitionToAutomaton(automaton, transition);
     this.transitionForm.reset({
@@ -224,13 +198,11 @@ export class AutomatonDetailComponent implements OnInit {
     });
   }
 
-  removeSelection(automaton: Automaton, removedSelection: GraphSelection): void {
-    if (removedSelection.selectedType === 'node') {
-      this.automataService.removeStateFromAutomaton(automaton, removedSelection.selectedId);
-    } else if (removedSelection.selectedType === 'link') {
-      // The selectedId is something like 'link-666'. We extract the number to get the transition index.
-      const transitionIndex = parseInt((removedSelection.selectedId as string).slice(5), 10);
-      this.automataService.removeTransitionFromAutomaton(automaton, transitionIndex);
+  removeCurrentSelection(automaton: Automaton): void {
+    if (typeof this.currentSelection === 'string') {
+      this.automataService.removeStateFromAutomaton(automaton, this.currentSelection);
+    } else if (typeof this.currentSelection === 'number') {
+      this.automataService.removeTransitionFromAutomaton(automaton, this.currentSelection);
     }
     delete this.currentSelection;
   }
@@ -240,30 +212,35 @@ export class AutomatonDetailComponent implements OnInit {
     this.automataService.addTestCaseToAutomaton(automaton, testCase);
   }
 
-  setStartState(automaton: Automaton, newStartState: string): void {
-    this.automataService.setStartState(automaton, newStartState);
+  setCurrentSelectionAsStartState(automaton: Automaton): void {
+    if (typeof this.currentSelection === 'string') {
+      this.automataService.setStartState(automaton, this.currentSelection);
+    }
   }
 
   isCurrentSelectionADenyingState(automaton: Automaton): boolean {
-    return this.currentSelection?.selectedType === 'node'
-      && !automaton.accept_states?.includes(this.currentSelection.selectedId);
+    return typeof this.currentSelection === 'string'
+      && !automaton.accept_states?.includes(this.currentSelection);
   }
 
-  addAcceptState(automaton: Automaton, newAcceptState: string): void {
-    this.automataService.addAcceptState(automaton, newAcceptState);
+  addCurrentSelectionToAcceptingStates(automaton: Automaton): void {
+    if (typeof this.currentSelection === 'string') {
+      this.automataService.addAcceptState(automaton, this.currentSelection);
+    }
   }
 
   isCurrentSelectionAnAcceptingState(automaton: Automaton): boolean {
-    return this.currentSelection?.selectedType === 'node'
-      && automaton.accept_states?.includes(this.currentSelection.selectedId);
+    return typeof this.currentSelection === 'string'
+      && automaton.accept_states?.includes(this.currentSelection);
   }
 
   /**
    * Converts an accepting state to a rejecting state just by removing the state from the list of accepting states.
-   * @param previouslyAcceptingState The state that is currently accepting but should and will be rejecting.
    */
-  removeAcceptState(automaton: Automaton, previouslyAcceptingState: string): void {
-    this.automataService.removeAcceptState(automaton, previouslyAcceptingState);
+  removeCurrentSelectionFromAcceptingStates(automaton: Automaton): void {
+    if (typeof this.currentSelection === 'string') {
+      this.automataService.removeAcceptState(automaton, this.currentSelection);
+    }
   }
 
   /**
