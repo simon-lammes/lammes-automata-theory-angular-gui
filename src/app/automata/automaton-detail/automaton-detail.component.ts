@@ -1,6 +1,6 @@
 import {Component, OnInit} from '@angular/core';
 import {ActivatedRoute, Router} from '@angular/router';
-import {AutomataService, Automaton, TestCase, TestCaseResult, Transition} from '../automata.service';
+import {AutomataService, Automaton, TestCase, TestCaseError, TestCaseResult, Transition} from '../automata.service';
 import {UntilDestroy, untilDestroyed} from '@ngneat/until-destroy';
 import {filter, first, map, pairwise, startWith, switchMap} from 'rxjs/operators';
 import {AbstractControl, FormBuilder, FormGroup, Validators} from '@angular/forms';
@@ -50,6 +50,11 @@ export class AutomatonDetailComponent implements OnInit {
    * powerful enums.
    */
   currentSelection: number | string;
+  /**
+   * Holds the first error found that has led to test cases not being executed properly.
+   * If test cases could be executed properly, this will hold 'undefined'.
+   */
+  testCaseError$: Observable<TestCaseError>;
 
   constructor(
     private activatedRoute: ActivatedRoute,
@@ -74,11 +79,11 @@ export class AutomatonDetailComponent implements OnInit {
   }
 
   get testInputControl(): AbstractControl {
-    return this.testCaseForm.controls.test_input;
+    return this.testCaseForm?.controls.test_input;
   }
 
   get expectationControl(): AbstractControl {
-    return this.testCaseForm.controls.expectation;
+    return this.testCaseForm?.controls.expectation;
   }
 
   ngOnInit(): void {
@@ -143,14 +148,18 @@ export class AutomatonDetailComponent implements OnInit {
     ).subscribe(([previous, current]) => {
       const existingInputs = current ? current.map(testCase => testCase.test_input) : [];
       // If a test case has been added, we reset the input field values.
-      // Otherwise we leave them unchanged.
+      // Otherwise we leave them unchanged. The form should also be set to default values when it is not defined yet.
       const hasTestCaseBeenAdded = previous?.length < current?.length;
+      const shouldFormBeSetToDefaultValues = hasTestCaseBeenAdded || !this.testInputControl || !this.expectationControl;
       this.testCaseForm = this.formBuilder.group({
-        test_input: this.formBuilder.control(!hasTestCaseBeenAdded ? this.testInputControl.value : '',
+        test_input: this.formBuilder.control(!shouldFormBeSetToDefaultValues ? this.testInputControl.value : '',
           RxwebValidators.noneOf({matchValues: existingInputs})),
-        expectation: this.formBuilder.control(!hasTestCaseBeenAdded ? this.expectationControl.value : false)
+        expectation: this.formBuilder.control(!shouldFormBeSetToDefaultValues ? this.expectationControl.value : false)
       });
     });
+    this.testCaseError$ = this.testCaseResults$.pipe(
+      map(testCases => testCases.find(testCase => testCase.error)?.error)
+    );
   }
 
   getNodesForAutomaton(automaton: Automaton): any[] {
@@ -295,5 +304,35 @@ export class AutomatonDetailComponent implements OnInit {
       maxHeight: '98%',
       maxWidth: '98%'
     });
+  }
+
+  /**
+   * Determines the color of a test case result indicator depending on the test status.
+   */
+  getTestResultIndicatorStyle(result: TestCaseResult): string {
+    if (result.testStatus === 'success') {
+      return 'color: green';
+    }
+    if (result.testStatus === 'failure') {
+      return 'color: red';
+    }
+    return '';
+  }
+
+  /**
+   * Determines the icon of a test case result indicator depending on the test status.
+   */
+  getTestResultIndicatorIcon(result: TestCaseResult): string {
+    if (result.testStatus === 'success') {
+      return 'done';
+    }
+    if (result.testStatus === 'failure') {
+      return 'close';
+    }
+    return 'help_outline';
+  }
+
+  canCurrentSelectionBeSetAsAcceptingState(automaton: Automaton): boolean {
+    return typeof this.currentSelection === 'string' && this.currentSelection !== automaton.start_state;
   }
 }

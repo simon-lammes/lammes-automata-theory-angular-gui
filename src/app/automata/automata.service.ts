@@ -1,6 +1,6 @@
 import {Injectable} from '@angular/core';
 import {BehaviorSubject, Observable, of} from 'rxjs';
-import {map, skip} from 'rxjs/operators';
+import {catchError, map, skip} from 'rxjs/operators';
 import {UntilDestroy, untilDestroyed} from '@ngneat/until-destroy';
 import {HttpClient} from '@angular/common/http';
 import {environment} from '../../environments/environment';
@@ -32,13 +32,24 @@ export interface Automaton {
   test_cases?: TestCase[];
 }
 
+/**
+ * Defines every known case that can go wrong with a test case.
+ */
+export type TestCaseError = 'server_unreachable' | 'missing_start_state' | 'input_not_accepted';
+
 export interface TestCaseResult {
   testCase: TestCase;
   /**
-   * True, when the expectation matches the actual result. For example, if we expect the automaton to reject
-   * the input and it is actually rejected, this is true.
+   * Success, when the expectation matches the actual result. For example, if we expect the automaton to reject
+   * the input and it is actually rejected, this is success.
+   * Failure is the opposite.
+   * Undefined when the test could not be executed.
    */
-  wasTestSuccessful: boolean;
+  testStatus: 'success' | 'failure' | 'undefined';
+  /**
+   * Defined if the test status is undefined. Contains information about why the test could not be executed.
+   */
+  error?: TestCaseError;
   hasInputBeenAccepted: boolean;
   /**
    * The states that were visited when the test case was run on the automaton.
@@ -123,6 +134,10 @@ export interface Minimization {
 })
 export class AutomataService {
   automataBehaviourSubject: BehaviorSubject<Automaton[]>;
+  /**
+   * All automata the user has created. They will be "automatically" (reactively) updated on any change
+   * and "automatically" saved to localstorage on any change.
+   */
   automata$: Observable<Automaton[]>;
 
   constructor(
@@ -197,6 +212,18 @@ export class AutomataService {
     if (!(automaton.test_cases?.length > 0)) {
       return of([]);
     }
+    if (!automaton.start_state || !automaton.transitions.some(transition =>
+      transition.state === automaton.start_state || transition.next_state === automaton.start_state)) {
+      return of(automaton.test_cases.map(testCase => {
+        return {
+          testStatus: 'undefined',
+          testCase,
+          visitedStates: undefined,
+          hasInputBeenAccepted: undefined,
+          error: 'missing_start_state'
+        } as TestCaseResult;
+      }));
+    }
     const rpcCalls = automaton.test_cases.map((testCase, index) => {
       return {
         jsonrpc: '2.0',
@@ -211,16 +238,36 @@ export class AutomataService {
     return this.httpClient.post<CheckRcpResponse[]>(environment.backendUrl, rpcCalls).pipe(
       map(responses => {
         return responses.map(response => {
+          if (response.error) {
+            return {
+              hasInputBeenAccepted: undefined,
+              visitedStates: undefined,
+              testCase: automaton.test_cases[response.id],
+              testStatus: 'undefined',
+              error: 'input_not_accepted'
+            } as TestCaseResult;
+          }
           const hasInputBeenAccepted = response.error ? false : response.result[0];
           const visitedStates = response.error ? [] : response.result[1];
           const testCase = automaton.test_cases[response.id];
           return {
-            wasTestSuccessful: hasInputBeenAccepted === testCase.expectation,
+            testStatus: hasInputBeenAccepted === testCase.expectation ? 'success' : 'failure',
             hasInputBeenAccepted,
             testCase,
             visitedStates
           } as TestCaseResult;
         });
+      }),
+      catchError(() => {
+        return of(automaton.test_cases.map(testCase => {
+          return {
+            testStatus: 'undefined',
+            testCase,
+            visitedStates: undefined,
+            hasInputBeenAccepted: undefined,
+            error: 'server_unreachable'
+          } as TestCaseResult;
+        }));
       })
     );
   }
